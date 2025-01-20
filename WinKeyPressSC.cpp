@@ -38,25 +38,35 @@ std::vector<KeyPressSequence> ParseSequences(const std::wstring& input) {
 }
 
 // Function to send key presses
-void SendKeyPresses(HWND hWnd, const std::vector<KeyPressSequence>& sequences) {
+static void SendKeyPresses(HWND hWnd, const std::vector<KeyPressSequence>& sequences) {
     while (isRunning) {
         for (const auto& sequence : sequences) {
             if (!isRunning) return;
 
+
+            // Generate lParam values
+            LPARAM KeyDownLParam = 1;                     // Repeat count = 1
+            LPARAM KeyUpLParam = (1 << 31) | (1 << 30);   // Key-up flag
+
             // Simulate key press (key down)
-            PostMessage(hWnd, WM_KEYDOWN, sequence.key, 0x00000001);
+            if (!PostMessage(hWnd, WM_KEYDOWN, sequence.key, KeyDownLParam)) {
+                std::wcerr << L"Failed to send WM_KEYDOWN for key: " << sequence.key << std::endl;
+            }
 
             // Small delay to simulate the key being held down briefly
             std::this_thread::sleep_for(std::chrono::milliseconds(sequence.intervalMs));
 
             // Simulate key release (key up)
-            PostMessage(hWnd, WM_KEYUP, sequence.key, 0xC0000001);
+            if (!PostMessage(hWnd, WM_KEYUP, sequence.key, KeyUpLParam)) {
+                std::wcerr << L"Failed to send WM_KEYUP for key: " << sequence.key << std::endl;
+            }
 
             // Delay between key presses
             std::this_thread::sleep_for(std::chrono::milliseconds(sequence.delayMs));
         }
     }
 }
+
 
 
 // Structure to pass data to EnumWindowsProc
